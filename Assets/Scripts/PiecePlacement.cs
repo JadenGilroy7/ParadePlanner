@@ -65,7 +65,7 @@ public class PiecePlacement : MonoBehaviour
         if (!IsOverlapping())
         {
             // Successful Placement
-            puzzleController.audioSource.pitch = Random.Range(0.5f, 1.0f);
+            puzzleController.audioSource.pitch = Random.Range(0.9f, 1.0f);
             puzzleController.audioSource.Play();
             placeRecent = gameObject.transform.position;
             rotationRecent = gameObject.transform.rotation;

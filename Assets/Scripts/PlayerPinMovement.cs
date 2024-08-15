@@ -7,6 +7,8 @@ public class PlayerPinMovement : MonoBehaviour
 {
     private Vector3 placeStart;
     public LayerMask collisionLayers;
+    public AudioSource audioSourceMusic;
+    public AudioSource audioSourceVictory;
     private Rigidbody body;
 
     void Start()
@@ -22,7 +24,12 @@ public class PlayerPinMovement : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log("Victory!");
+        if (transform.position != placeStart)
+        {
+            Debug.Log("Victory!");
+            audioSourceMusic.Stop();
+            audioSourceVictory.Play();
+        }
     }
 
     public void MoveTowardsPoint(Vector3 targetPoint, float moveSpeed)

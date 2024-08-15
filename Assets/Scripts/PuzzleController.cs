@@ -11,6 +11,9 @@ public class PuzzleController : MonoBehaviour
     private float pieceLift = 0.5f; // How far to lift piece when selected
 
     public AudioSource audioSource;
+    public AudioSource audioSourceSwish;
+    public AudioSource audioSourcePin;
+    public AudioSource audioSourceReset;
 
     public float gridSize = 2f; // Size of each grid cell
     public LayerMask pieceLayer; // Layer for the puzzle pieces
@@ -70,6 +73,7 @@ public class PuzzleController : MonoBehaviour
                     // Calculate offset to keep relative positions
                     Vector3 cursorWorldPos = GetCursorWorldPosition();
                     //offset = selectedObject.transform.position - cursorWorldPos;
+                    audioSourcePin.Play();
                     Debug.Log("Player Selected");
                 }
                 else
@@ -118,7 +122,9 @@ public class PuzzleController : MonoBehaviour
             if (selectedObject != null)
             {
                 selectedObject.transform.Rotate(0f, 90f, 0f);
-             }
+                audioSourceSwish.pitch = Random.Range(0.5f, 1.0f);
+                audioSourceSwish.Play();
+            }
         }
 
         if (selectedObject != null)
@@ -183,11 +189,14 @@ public class PuzzleController : MonoBehaviour
 
     public void ResetAllPieces()
     {
+        audioSourceReset.Play();
         // Iterate through all pieces and reset their positions
         foreach (PiecePlacement piece in pieces)
         {
             piece.ResetToStartPosition();
+            PieceRemoved();
         }
+
 
         Debug.Log("All pieces have been reset to their starting positions.");
     }
