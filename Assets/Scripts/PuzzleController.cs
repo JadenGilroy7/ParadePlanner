@@ -1,7 +1,9 @@
 using System;
 using TMPro;
 using Unity.Burst.Intrinsics;
+using UnityEditor.SearchService;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
 public class PuzzleController : MonoBehaviour
@@ -34,10 +36,14 @@ public class PuzzleController : MonoBehaviour
     public TextMeshProUGUI textWarning;
     private float textWarningAlpha = 0.0f;
     private float textWarningFadeSpeed = 0.02f;
-    private Boolean textWarningFadingIn = false;
-    private float textWarningTime = 2000f;
+    public Boolean textWarningFadingIn = false;
+    private float textWarningTime = 5000.0f;
 
     private PiecePlacement[] pieces;
+
+    public string nextSceneName = "null";
+    public GameObject buttonReset; // Button for Resetting Pieces or Advancing Level
+    public TextMeshProUGUI textReset;
 
     [HideInInspector] public Boolean levelCleared = false;
 
@@ -53,6 +59,7 @@ public class PuzzleController : MonoBehaviour
         pieces = FindObjectsOfType<PiecePlacement>(); // Find all pieces
 
         SetAlpha(textWarningAlpha);
+        UpdateTextCounter();
     }
 
     void Update()
@@ -86,7 +93,7 @@ public class PuzzleController : MonoBehaviour
             {
                 textWarningAlpha -= textWarningFadeSpeed;
                 SetAlpha(textWarningAlpha);
-                textWarningTime = 2000.0f;
+                textWarningTime = 5000.0f;
             }
         }
 
@@ -262,6 +269,12 @@ public class PuzzleController : MonoBehaviour
             TextWarningStart("All pieces reset.");
             Debug.Log("All pieces have been reset to their starting positions.");
         }
+        else
+        {
+            if (nextSceneName != "null"){
+                SceneManager.LoadScene(nextSceneName);
+            }
+        }
     }
 
     public void UpdateTextCounter()
@@ -280,6 +293,8 @@ public class PuzzleController : MonoBehaviour
     {
         textWarningFadingIn = true;
         textWarning.text = text;
+        textWarningAlpha = 0.0f;
+        textWarningTime = 5000.0f;
     }
 
     public void TextFadeEarly()
@@ -295,6 +310,21 @@ public class PuzzleController : MonoBehaviour
     {
         levelCleared = true;
         TextWarningStart("Level Cleared!");
+        if (buttonReset != null)
+        {
+            buttonReset.SetActive(true);
+        }
+        if (textReset != null)
+        {
+            if (nextSceneName != "null")
+            {
+                textReset.text = "Next Level";
+            }
+            else
+            {
+                textReset.text = "The End!";
+            }
+        }
     }
     void QuitGame()
     {
