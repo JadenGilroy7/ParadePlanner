@@ -158,6 +158,7 @@ public class PiecePlacement : MonoBehaviour
         // Reset the piece to its starting position
         transform.position = placeStart;
         transform.Rotate(0f, ChooseRandom(rotationPosibilities), 0f);
+        placeRecent = placeStart;
     }
 
     float ChooseRandom(float[] options)

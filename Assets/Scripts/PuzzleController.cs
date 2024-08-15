@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -26,6 +27,8 @@ public class PuzzleController : MonoBehaviour
     private float playerPinSpeed = 20f;
     public LayerMask playerLayer;
     private bool playerControlled = false; // Whether the player pin is currently grabbed
+
+    public TextMeshProUGUI textCounter;
 
     private PiecePlacement[] pieces;
 
@@ -179,12 +182,14 @@ public class PuzzleController : MonoBehaviour
             Debug.Log("All pieces placed! Player may now move!");
             // The win condition
         }
+        UpdateTextCounter();
     }
 
     public void PieceRemoved()
     {
         unplacedPieces++;
         Debug.Log($"Piece removed. Unplaced pieces: {unplacedPieces}");
+        UpdateTextCounter();
     }
 
     public void ResetAllPieces()
@@ -194,11 +199,19 @@ public class PuzzleController : MonoBehaviour
         foreach (PiecePlacement piece in pieces)
         {
             piece.ResetToStartPosition();
-            PieceRemoved();
         }
 
+        // Count all pieces with PiecePlacement component
+        unplacedPieces = FindObjectsOfType<PiecePlacement>().Length;
+        totalPieces = unplacedPieces;
+        UpdateTextCounter();
 
         Debug.Log("All pieces have been reset to their starting positions.");
+    }
+
+    public void UpdateTextCounter()
+    {
+        textCounter.text = "Pieces Remaining: "+unplacedPieces;
     }
 
 }
