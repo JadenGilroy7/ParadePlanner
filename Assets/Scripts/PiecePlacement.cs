@@ -9,6 +9,10 @@ public class PiecePlacement : MonoBehaviour
     private Vector3 gridPosition;
     private Vector3 placeStart;
     private Vector3 placeRecent;
+    private Quaternion rotationRecent;
+    private bool isPlaced = false; // Whether piece is within board bounds
+    private bool placeUpdate = false; // Whether place needs to be updated
+    private float[] rotationPosibilities = {0f, 90f, 180f, 270f}; // Possible rotations
 
     private PuzzleController puzzleController;
 
@@ -25,6 +29,25 @@ public class PiecePlacement : MonoBehaviour
 
     void Update()
     {
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        //Debug.Log("Enter");
+        if (other.gameObject == puzzleController.placementZone && !isPlaced)
+        {
+            isPlaced = true;
+            placeUpdate = true;
+        }
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject == puzzleController.placementZone && isPlaced)
+        {
+            isPlaced = false;
+            placeUpdate = true;
+        }
     }
 
     public void TryPlacePiece()
@@ -45,11 +68,25 @@ public class PiecePlacement : MonoBehaviour
             puzzleController.audioSource.pitch = Random.Range(0.5f, 1.0f);
             puzzleController.audioSource.Play();
             placeRecent = gameObject.transform.position;
+            rotationRecent = gameObject.transform.rotation;
+
+            if (placeUpdate == true){
+                if (isPlaced)
+                {
+                    puzzleController.PiecePlaced();
+                }
+                else
+                {
+                    puzzleController.PieceRemoved();
+                }
+                placeUpdate = false;
+            }
         }
         else
         {
             Debug.Log("Cannot place piece here due to overlap.");
             transform.position = placeRecent;
+            transform.rotation = rotationRecent;
         }
     }
 
@@ -115,5 +152,23 @@ public class PiecePlacement : MonoBehaviour
         }
 
         return hasCollision;
+    }
+    public void ResetToStartPosition()
+    {
+        // Reset the piece to its starting position
+        transform.position = placeStart;
+        transform.Rotate(0f, ChooseRandom(rotationPosibilities), 0f);
+    }
+
+    float ChooseRandom(float[] options)
+    {
+        if (options.Length == 0)
+        {
+            Debug.LogWarning("The list of options is empty.");
+            return 0;
+        }
+
+        int randomIndex = Random.Range(0, options.Length);
+        return options[randomIndex];
     }
 }

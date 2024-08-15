@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class PuzzleController : MonoBehaviour
 {
@@ -19,6 +20,12 @@ public class PuzzleController : MonoBehaviour
     private int unplacedPieces;
     public GameObject placementZone;
 
+    private float playerPinSpeed = 20f;
+    public LayerMask playerLayer;
+    private bool playerControlled = false; // Whether the player pin is currently grabbed
+
+    private PiecePlacement[] pieces;
+
     void Start()
     {
         // Count all pieces with PiecePlacement component
@@ -26,6 +33,7 @@ public class PuzzleController : MonoBehaviour
         totalPieces = unplacedPieces;
         Debug.Log($"Total pieces: {totalPieces}, Unplaced pieces: {unplacedPieces}");
         movementPlane = new Plane(Vector3.up, new Vector3(0, moveHeight, 0));
+        pieces = FindObjectsOfType<PiecePlacement>(); // Find all pieces
     }
 
     void Update()
@@ -52,22 +60,57 @@ public class PuzzleController : MonoBehaviour
                 Vector3 cursorWorldPos = GetCursorWorldPosition();
                 offset = selectedObject.transform.position - cursorWorldPos;
             }
+            if (Physics.Raycast(ray, out hit, Mathf.Infinity, playerLayer))
+            {
+                if (unplacedPieces <= 0)
+                {
+                    Transform hitTransform = hit.collider.transform;
+                    selectedObject = hitTransform.gameObject;
+                    playerControlled = true;
+                    // Calculate offset to keep relative positions
+                    Vector3 cursorWorldPos = GetCursorWorldPosition();
+                    //offset = selectedObject.transform.position - cursorWorldPos;
+                    Debug.Log("Player Selected");
+                }
+                else
+                {
+              
+                    Debug.LogWarning("Place ALL pieces on board before moving the pin!");
+                }
+            }
         }
         else if (Input.GetMouseButtonUp(0))
         {
             if (selectedObject != null)
             {
-                PiecePlacement piecePlacement = selectedObject.GetComponent<PiecePlacement>();
-                if (piecePlacement != null)
+                if (playerControlled)
                 {
-                    piecePlacement.TryPlacePiece();
+                    PlayerPinMovement playerMovement = selectedObject.GetComponent<PlayerPinMovement>();
+                    if (playerMovement != null)
+                    {
+                        playerMovement.ResetPlayer();
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Selected object does not have a playerPinMovement component");
+                    }
+                    selectedObject = null;
+                    playerControlled = false;
                 }
-                else
-                {
-                    Debug.LogWarning("Selected object does not have a PiecePlacement component");
+                else { 
+                    PiecePlacement piecePlacement = selectedObject.GetComponent<PiecePlacement>();
+                    if (piecePlacement != null)
+                    {
+                        piecePlacement.TryPlacePiece();
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Selected object does not have a PiecePlacement component");
+                    }
+                    selectedObject = null;
                 }
 
-                selectedObject = null;
+                
             }
         }
         if (Input.GetMouseButtonDown(1))
@@ -80,8 +123,25 @@ public class PuzzleController : MonoBehaviour
 
         if (selectedObject != null)
         {
-            Vector3 cursorWorldPos = GetCursorWorldPosition();
-            selectedObject.transform.position = cursorWorldPos + offset + new Vector3(0f, pieceLift, 0f);
+
+            if (playerControlled)
+            {
+                Vector3 cursorWorldPos = GetCursorWorldPosition();
+                PlayerPinMovement playerMovement = selectedObject.GetComponent<PlayerPinMovement>();
+                if (playerMovement != null)
+                {
+                    playerMovement.MoveTowardsPoint(cursorWorldPos, playerPinSpeed);
+                }
+                else
+                {
+                    Debug.LogError("PlayerPinMovement component not found on the selected object!");
+                }
+            }
+            else
+            {
+                Vector3 cursorWorldPos = GetCursorWorldPosition();
+                selectedObject.transform.position = cursorWorldPos + offset + new Vector3(0f, pieceLift, 0f);
+            }
         }
     }
 
@@ -103,5 +163,33 @@ public class PuzzleController : MonoBehaviour
         return Vector3.zero;
     }
 
+    public void PiecePlaced()
+    {
+        unplacedPieces--;
+        Debug.Log($"Piece placed! Remaining unplaced pieces: {unplacedPieces}");
+
+        if (unplacedPieces == 0)
+        {
+            Debug.Log("All pieces placed! Player may now move!");
+            // The win condition
+        }
+    }
+
+    public void PieceRemoved()
+    {
+        unplacedPieces++;
+        Debug.Log($"Piece removed. Unplaced pieces: {unplacedPieces}");
+    }
+
+    public void ResetAllPieces()
+    {
+        // Iterate through all pieces and reset their positions
+        foreach (PiecePlacement piece in pieces)
+        {
+            piece.ResetToStartPosition();
+        }
+
+        Debug.Log("All pieces have been reset to their starting positions.");
+    }
 
 }
