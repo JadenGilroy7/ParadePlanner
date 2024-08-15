@@ -10,9 +10,11 @@ public class PlayerPinMovement : MonoBehaviour
     public AudioSource audioSourceMusic;
     public AudioSource audioSourceVictory;
     private Rigidbody body;
+    private PuzzleController puzzleController;
 
     void Start()
     {
+        puzzleController = FindObjectOfType<PuzzleController>();
         placeStart = gameObject.transform.position;
         body = GetComponent<Rigidbody>();
     }
@@ -29,16 +31,25 @@ public class PlayerPinMovement : MonoBehaviour
             Debug.Log("Victory!");
             audioSourceMusic.Stop();
             audioSourceVictory.Play();
+            
+            if (puzzleController == null)
+            {
+                Debug.LogError("PuzzleController NOT found in the scene!");
+            }
+            puzzleController.LevelClear();
+            body.velocity = new Vector3(0f, 0f, 0f);
         }
     }
 
     public void MoveTowardsPoint(Vector3 targetPoint, float moveSpeed)
     {
-        // Calculate the direction to move towards the target point
-        Vector3 moveDirection = (targetPoint - transform.position).normalized;
+        if (!puzzleController.levelCleared){
+            // Calculate the direction to move towards the target point
+            Vector3 moveDirection = (targetPoint - transform.position).normalized;
 
-        // Check for potential collisions using a Rigidbody SweepTest
-        body.velocity = moveDirection * moveSpeed;
+            // Check for potential collisions using a Rigidbody SweepTest
+            body.velocity = moveDirection * moveSpeed;
+        }
     }
 
     public void ResetPlayer()

@@ -1,4 +1,6 @@
+using System;
 using TMPro;
+using Unity.Burst.Intrinsics;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -29,8 +31,17 @@ public class PuzzleController : MonoBehaviour
     private bool playerControlled = false; // Whether the player pin is currently grabbed
 
     public TextMeshProUGUI textCounter;
+    public TextMeshProUGUI textWarning;
+    private float textWarningAlpha = 0.0f;
+    private float textWarningFadeSpeed = 0.02f;
+    private Boolean textWarningFadingIn = false;
+    private float textWarningTime = 2000f;
 
     private PiecePlacement[] pieces;
+
+    [HideInInspector] public Boolean levelCleared = false;
+
+
 
     void Start()
     {
@@ -40,12 +51,48 @@ public class PuzzleController : MonoBehaviour
         Debug.Log($"Total pieces: {totalPieces}, Unplaced pieces: {unplacedPieces}");
         movementPlane = new Plane(Vector3.up, new Vector3(0, moveHeight, 0));
         pieces = FindObjectsOfType<PiecePlacement>(); // Find all pieces
+
+        SetAlpha(textWarningAlpha);
     }
 
     void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
+            QuitGame();
+        }
+        if (textWarningFadingIn)
+        {
+            if (textWarningAlpha <= 1.0f)
+            {
+                textWarningAlpha += textWarningFadeSpeed;
+                SetAlpha(textWarningAlpha);
+            }
+            else
+            {
+                if (textWarningTime > 0.0)
+                {
+                    textWarningTime -= 1.0f;
+                }
+                else
+                {
+                    textWarningFadingIn = false;
+                }
+            }
+        }
+        else
+        {
+            if (textWarningAlpha > 0.0f)
+            {
+                textWarningAlpha -= textWarningFadeSpeed;
+                SetAlpha(textWarningAlpha);
+                textWarningTime = 2000.0f;
+            }
+        }
+
+        if (Input.GetMouseButtonDown(0) && !levelCleared)
+        {
+            TextFadeEarly();
             // Raycast from the camera through the mouse position
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
@@ -81,14 +128,14 @@ public class PuzzleController : MonoBehaviour
                 }
                 else
                 {
-              
+                    TextWarningStart("Cannot move pin until ALL pieces are placed");
                     Debug.LogWarning("Place ALL pieces on board before moving the pin!");
                 }
             }
         }
         else if (Input.GetMouseButtonUp(0))
         {
-            if (selectedObject != null)
+            if (selectedObject != null && !levelCleared)
             {
                 if (playerControlled)
                 {
@@ -104,7 +151,8 @@ public class PuzzleController : MonoBehaviour
                     selectedObject = null;
                     playerControlled = false;
                 }
-                else { 
+                else
+                {
                     PiecePlacement piecePlacement = selectedObject.GetComponent<PiecePlacement>();
                     if (piecePlacement != null)
                     {
@@ -116,21 +164,23 @@ public class PuzzleController : MonoBehaviour
                     }
                     selectedObject = null;
                 }
-
-                
+            }
+            else
+            {
+                selectedObject = null;
             }
         }
         if (Input.GetMouseButtonDown(1))
         {
-            if (selectedObject != null)
+            if (selectedObject != null && !levelCleared)
             {
                 selectedObject.transform.Rotate(0f, 90f, 0f);
-                audioSourceSwish.pitch = Random.Range(0.5f, 1.0f);
+                audioSourceSwish.pitch = UnityEngine.Random.Range(0.5f, 1.0f);
                 audioSourceSwish.Play();
             }
         }
 
-        if (selectedObject != null)
+        if (selectedObject != null && !levelCleared)
         {
 
             if (playerControlled)
@@ -177,7 +227,7 @@ public class PuzzleController : MonoBehaviour
         unplacedPieces--;
         Debug.Log($"Piece placed! Remaining unplaced pieces: {unplacedPieces}");
 
-        if (unplacedPieces == 0)
+        if (unplacedPieces == 0.0f)
         {
             Debug.Log("All pieces placed! Player may now move!");
             // The win condition
@@ -194,24 +244,62 @@ public class PuzzleController : MonoBehaviour
 
     public void ResetAllPieces()
     {
-        audioSourceReset.Play();
-        // Iterate through all pieces and reset their positions
-        foreach (PiecePlacement piece in pieces)
+        if (!levelCleared)
         {
-            piece.ResetToStartPosition();
+            audioSourceReset.Play();
+            // Iterate through all pieces and reset their positions
+            foreach (PiecePlacement piece in pieces)
+            {
+                piece.ResetToStartPosition();
+            }
+            levelCleared = false;
+
+            // Count all pieces with PiecePlacement component
+            unplacedPieces = FindObjectsOfType<PiecePlacement>().Length;
+            totalPieces = unplacedPieces;
+            UpdateTextCounter();
+            TextFadeEarly();
+            TextWarningStart("All pieces reset.");
+            Debug.Log("All pieces have been reset to their starting positions.");
         }
-
-        // Count all pieces with PiecePlacement component
-        unplacedPieces = FindObjectsOfType<PiecePlacement>().Length;
-        totalPieces = unplacedPieces;
-        UpdateTextCounter();
-
-        Debug.Log("All pieces have been reset to their starting positions.");
     }
 
     public void UpdateTextCounter()
     {
-        textCounter.text = "Pieces Remaining: "+unplacedPieces;
+        textCounter.text = "Pieces Remaining: " + unplacedPieces;
+    }
+
+    public void SetAlpha(float alpha)
+    {
+        Color color = textWarning.color;
+        color.a = Mathf.Clamp01(alpha); // Ensure the alpha is between 0 and 1
+        textWarning.color = color;
+    }
+
+    public void TextWarningStart(string text)
+    {
+        textWarningFadingIn = true;
+        textWarning.text = text;
+    }
+
+    public void TextFadeEarly()
+    {
+        if (textWarningAlpha > 0.0f && textWarningTime > 0.0f)
+        {
+            textWarningFadingIn = false;
+            textWarningTime = 0.0f;
+        }
+    }
+
+    public void LevelClear()
+    {
+        levelCleared = true;
+        TextWarningStart("Level Cleared!");
+    }
+    void QuitGame()
+    {
+        Debug.Log("Exiting game.");
+        Application.Quit();
     }
 
 }
