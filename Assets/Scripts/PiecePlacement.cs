@@ -11,8 +11,9 @@ public class PiecePlacement : MonoBehaviour
     private Vector3 placeRecent;
     private Quaternion rotationRecent;
     private bool isPlaced = false; // Whether piece is within board bounds
-    private bool placeUpdate = false; // Whether place needs to be updated
+    private bool isPlacedRecent = false;
     private float[] rotationPosibilities = {0f, 90f, 180f, 270f}; // Possible rotations
+    
 
     private PuzzleController puzzleController;
 
@@ -37,7 +38,6 @@ public class PiecePlacement : MonoBehaviour
         if (other.gameObject == puzzleController.placementZone && !isPlaced)
         {
             isPlaced = true;
-            placeUpdate = true;
         }
     }
 
@@ -46,7 +46,6 @@ public class PiecePlacement : MonoBehaviour
         if (other.gameObject == puzzleController.placementZone && isPlaced)
         {
             isPlaced = false;
-            placeUpdate = true;
         }
     }
 
@@ -70,7 +69,8 @@ public class PiecePlacement : MonoBehaviour
             placeRecent = gameObject.transform.position;
             rotationRecent = gameObject.transform.rotation;
 
-            if (placeUpdate == true){
+            if (isPlaced != isPlacedRecent)
+            {
                 if (isPlaced)
                 {
                     puzzleController.PiecePlaced();
@@ -79,7 +79,7 @@ public class PiecePlacement : MonoBehaviour
                 {
                     puzzleController.PieceRemoved();
                 }
-                placeUpdate = false;
+                isPlacedRecent = isPlaced;
             }
         }
         else
@@ -87,6 +87,7 @@ public class PiecePlacement : MonoBehaviour
             Debug.Log("Cannot place piece here due to overlap.");
             transform.position = placeRecent;
             transform.rotation = rotationRecent;
+            isPlaced = isPlacedRecent;
         }
     }
 
@@ -159,7 +160,9 @@ public class PiecePlacement : MonoBehaviour
         transform.position = placeStart;
         transform.Rotate(0f, ChooseRandom(rotationPosibilities), 0f);
         placeRecent = placeStart;
-    }
+        isPlaced = false; // Whether piece is within board bounds
+        isPlacedRecent = false;
+}
 
     float ChooseRandom(float[] options)
     {

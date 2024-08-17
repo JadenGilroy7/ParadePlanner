@@ -1,10 +1,7 @@
 using System;
 using TMPro;
-using Unity.Burst.Intrinsics;
-using UnityEditor.SearchService;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UIElements;
 
 public class PuzzleController : MonoBehaviour
 {
@@ -45,12 +42,19 @@ public class PuzzleController : MonoBehaviour
     public GameObject buttonReset; // Button for Resetting Pieces or Advancing Level
     public TextMeshProUGUI textReset;
 
+    private Texture2D cursorTexture;  // My custom cursor texture
+    private Texture2D cursorTexture2;  // My custom cursor texture for closed hand
+    private Vector2 cursorHotspot = new Vector2(16.0f,16.0f);  // The point within the texture that represents the click position
+    private CursorMode cursorMode = CursorMode.ForceSoftware;
+
     [HideInInspector] public Boolean levelCleared = false;
 
 
 
     void Start()
     {
+        cursorTexture = Resources.Load<Texture2D>("Cursors/Cursor_Open");  // My custom cursor texture
+        cursorTexture2 = Resources.Load<Texture2D>("Cursors/Cursor_Closed");  // My custom cursor texture for closed hand
         // Count all pieces with PiecePlacement component
         unplacedPieces = FindObjectsOfType<PiecePlacement>().Length;
         totalPieces = unplacedPieces;
@@ -60,10 +64,20 @@ public class PuzzleController : MonoBehaviour
 
         SetAlpha(textWarningAlpha);
         UpdateTextCounter();
+        Cursor.SetCursor(cursorTexture, cursorHotspot, cursorMode);
     }
 
     void Update()
     {
+        if (selectedObject != null){
+            Cursor.SetCursor(cursorTexture2, cursorHotspot, cursorMode);
+            //Debug.Log("Cursor Tick2");
+        }
+        else
+        {
+            Cursor.SetCursor(cursorTexture, cursorHotspot, cursorMode);
+            //Debug.Log("Cursor Tick");
+        }
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             QuitGame();
