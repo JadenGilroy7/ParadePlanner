@@ -13,8 +13,8 @@ public class PiecePlacement : MonoBehaviour
     private bool isPlaced = false; // Whether piece is within board bounds
     private bool isPlacedRecent = false;
     private float[] rotationPosibilities = {0f, 90f, 180f, 270f}; // Possible rotations
-    
 
+    public bool isRotatable = true;
     private PuzzleController puzzleController;
 
     void Start()
@@ -64,8 +64,8 @@ public class PiecePlacement : MonoBehaviour
         if (!IsOverlapping())
         {
             // Successful Placement
-            puzzleController.audioSource.pitch = Random.Range(0.9f, 1.0f);
-            puzzleController.audioSource.Play();
+            puzzleController.PlayClip("Audio/Audio_Click", 0.8f, true);
+
             placeRecent = gameObject.transform.position;
             rotationRecent = gameObject.transform.rotation;
 
@@ -158,7 +158,9 @@ public class PiecePlacement : MonoBehaviour
     {
         // Reset the piece to its starting position
         transform.position = placeStart;
-        transform.Rotate(0f, ChooseRandom(rotationPosibilities), 0f);
+        if (isRotatable){
+            transform.Rotate(0f, ChooseRandom(rotationPosibilities), 0f);
+        }
         placeRecent = placeStart;
         isPlaced = false; // Whether piece is within board bounds
         isPlacedRecent = false;

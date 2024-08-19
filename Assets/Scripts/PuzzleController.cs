@@ -1,34 +1,35 @@
 using System;
 using TMPro;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class PuzzleController : MonoBehaviour
 {
-    public Camera mainCamera;
-    public float moveHeight = -4f; // The y-coordinate
+    [HideInInspector] public Camera mainCamera;
     [HideInInspector] public GameObject selectedObject;
     private Vector3 offset;
     private Plane movementPlane;
     private float pieceLift = 0.5f; // How far to lift piece when selected
 
-    public AudioSource audioSource;
-    public AudioSource audioSourceSwish;
-    public AudioSource audioSourcePin;
-    public AudioSource audioSourceReset;
+    private AudioSource audioSourceSFX;
 
-    public float gridSize = 2f; // Size of each grid cell
-    public LayerMask pieceLayer; // Layer for the puzzle pieces
-    public LayerMask obstacleLayer; // Layer for obstacle tiles
+    [HideInInspector] public float gridSize = 2f; // Size of each grid cell
+    [HideInInspector] public LayerMask pieceLayer; // Layer for the puzzle pieces
+    [HideInInspector] public LayerMask obstacleLayer; // Layer for obstacle tiles
+    [HideInInspector] public LayerMask playerLayer;
 
-    public int totalPieces;
+    [HideInInspector] public int totalPieces;
     private int unplacedPieces;
     public GameObject placementZone;
+    public int pinQuota = 1;
+    [HideInInspector] public int placedPins = 0;
+    public int extraPieces = 0;
 
     private float playerPinSpeed = 20f;
-    public LayerMask playerLayer;
     private bool playerControlled = false; // Whether the player pin is currently grabbed
 
+    // Text UI Integration
     public TextMeshProUGUI textCounter;
     public TextMeshProUGUI textWarning;
     private float textWarningAlpha = 0.0f;
@@ -40,7 +41,7 @@ public class PuzzleController : MonoBehaviour
 
     public string nextSceneName = "null";
     public GameObject buttonReset; // Button for Resetting Pieces or Advancing Level
-    public TextMeshProUGUI textReset;
+    [HideInInspector] public TextMeshProUGUI textReset;
 
     private Texture2D cursorTexture;  // My custom cursor texture
     private Texture2D cursorTexture2;  // My custom cursor texture for closed hand
@@ -53,13 +54,35 @@ public class PuzzleController : MonoBehaviour
 
     void Start()
     {
+        audioSourceSFX = GetComponentInChildren<AudioSource>();
+        if (audioSourceSFX == null)
+        {
+            Debug.LogWarning("No AudioSource found in children of " + gameObject.name);
+        }
+
+        mainCamera = FindObjectOfType<Camera>();
+        if (mainCamera == null)
+        {
+            Debug.LogWarning("No camera found!");
+        }
+        SaveLastLevel(SceneManager.GetActiveScene().name);
+
+
+        // Initialize layers
+        pieceLayer = 1 << LayerMask.NameToLayer("Pieces");
+        obstacleLayer = 1 << LayerMask.NameToLayer("Obstacles");
+        playerLayer = 1 << LayerMask.NameToLayer("Player");
+
+        textReset = buttonReset.GetComponentInChildren<TextMeshProUGUI>();
+
         cursorTexture = Resources.Load<Texture2D>("Cursors/Cursor_Open");  // My custom cursor texture
         cursorTexture2 = Resources.Load<Texture2D>("Cursors/Cursor_Closed");  // My custom cursor texture for closed hand
         // Count all pieces with PiecePlacement component
-        unplacedPieces = FindObjectsOfType<PiecePlacement>().Length;
-        totalPieces = unplacedPieces;
+        totalPieces = FindObjectsOfType<PiecePlacement>().Length;
+        unplacedPieces = totalPieces - extraPieces;
+        
         Debug.Log($"Total pieces: {totalPieces}, Unplaced pieces: {unplacedPieces}");
-        movementPlane = new Plane(Vector3.up, new Vector3(0, moveHeight, 0));
+        movementPlane = new Plane(Vector3.up, new Vector3(0, 0, 0));
         pieces = FindObjectsOfType<PiecePlacement>(); // Find all pieces
 
         SetAlpha(textWarningAlpha);
@@ -130,6 +153,11 @@ public class PuzzleController : MonoBehaviour
                     selectedObject = hitTransform.gameObject;
                 }
 
+                if (selectedObject.GetComponent<PiecePlacement>() != null)
+                {
+
+                }
+
                 // Calculate offset to keep relative positions
                 Vector3 cursorWorldPos = GetCursorWorldPosition();
                 offset = selectedObject.transform.position - cursorWorldPos;
@@ -143,8 +171,8 @@ public class PuzzleController : MonoBehaviour
                     playerControlled = true;
                     // Calculate offset to keep relative positions
                     Vector3 cursorWorldPos = GetCursorWorldPosition();
-                    //offset = selectedObject.transform.position - cursorWorldPos;
-                    audioSourcePin.Play();
+
+                    PlayClip("Audio/Audio_PinPull", 1.0f, false);
                     Debug.Log("Player Selected");
                 }
                 else
@@ -163,7 +191,10 @@ public class PuzzleController : MonoBehaviour
                     PlayerPinMovement playerMovement = selectedObject.GetComponent<PlayerPinMovement>();
                     if (playerMovement != null)
                     {
-                        playerMovement.ResetPlayer();
+                        if (!playerMovement.placed)
+                        {
+                            playerMovement.ResetPlayer();
+                        }
                     }
                     else
                     {
@@ -193,11 +224,34 @@ public class PuzzleController : MonoBehaviour
         }
         if (Input.GetMouseButtonDown(1))
         {
+            bool fail = false;
             if (selectedObject != null && !levelCleared)
             {
-                selectedObject.transform.Rotate(0f, 90f, 0f);
-                audioSourceSwish.pitch = UnityEngine.Random.Range(0.5f, 1.0f);
-                audioSourceSwish.Play();
+                PiecePlacement selectedPiece = selectedObject.GetComponent<PiecePlacement>();
+                if (selectedPiece != null) {
+                    if (selectedPiece.isRotatable)
+                    {
+                        selectedObject.transform.Rotate(0f, 90f, 0f);
+                        PlayClip("Audio/Audio_Swish", 0.25f, true);
+                    }
+                    else
+                    {
+                        fail = true;
+                    }
+                }
+                else
+                {
+                    fail = true;
+                }
+            }
+            else
+            {
+                fail = true;
+            }
+            if (fail)
+            {
+                TextWarningStart("Can only rotate dark pieces");
+                // Warning message for no rotation here
             }
         }
 
@@ -231,7 +285,7 @@ public class PuzzleController : MonoBehaviour
         float distance;
 
         // Ensure the plane's normal is aligned with the camera's forward direction
-        movementPlane = new Plane(Vector3.down, new Vector3(0, moveHeight, 0));
+        movementPlane = new Plane(Vector3.down, new Vector3(0, 0, 0));
 
         if (movementPlane.Raycast(ray, out distance))
         {
@@ -267,7 +321,8 @@ public class PuzzleController : MonoBehaviour
     {
         if (!levelCleared)
         {
-            audioSourceReset.Play();
+            PlayClip("Audio/Audio_Reset", 1.0f, false);
+            
             // Iterate through all pieces and reset their positions
             foreach (PiecePlacement piece in pieces)
             {
@@ -280,12 +335,15 @@ public class PuzzleController : MonoBehaviour
             totalPieces = unplacedPieces;
             UpdateTextCounter();
             TextFadeEarly();
-            TextWarningStart("All pieces reset.");
+            TextWarningStart("All pieces reset");
             Debug.Log("All pieces have been reset to their starting positions.");
         }
         else
         {
             if (nextSceneName != "null"){
+                if(nextSceneName == "SceneLevel2-1"){
+                    MusicManager.Instance.ChangeClip(1);
+                }
                 SceneManager.LoadScene(nextSceneName);
             }
         }
@@ -293,7 +351,14 @@ public class PuzzleController : MonoBehaviour
 
     public void UpdateTextCounter()
     {
-        textCounter.text = "Pieces Remaining: " + unplacedPieces;
+        if (unplacedPieces >= 0)
+        {
+            textCounter.text = "Pieces Remaining: " + unplacedPieces;
+        }
+        else
+        {
+            textCounter.text = "Pieces Remaining: 0";
+        }
     }
 
     public void SetAlpha(float alpha)
@@ -322,22 +387,30 @@ public class PuzzleController : MonoBehaviour
 
     public void LevelClear()
     {
-        levelCleared = true;
-        TextWarningStart("Level Cleared!");
-        if (buttonReset != null)
+        placedPins += 1;
+        if (placedPins >= pinQuota)
         {
-            buttonReset.SetActive(true);
-        }
-        if (textReset != null)
+            levelCleared = true;
+            TextWarningStart("Level Cleared!");
+            if (buttonReset != null)
+            {
+                buttonReset.SetActive(true);
+            }
+                if (textReset != null)
+                {
+                    if (nextSceneName != "null")
+                    {
+                        textReset.text = "Next Level";
+                    }
+                    else
+                    {
+                        textReset.text = "The End!";
+                    }
+                }
+            }
+        else
         {
-            if (nextSceneName != "null")
-            {
-                textReset.text = "Next Level";
-            }
-            else
-            {
-                textReset.text = "The End!";
-            }
+            Debug.Log("Placed Pins Plus One");
         }
     }
     void QuitGame()
@@ -346,4 +419,49 @@ public class PuzzleController : MonoBehaviour
         Application.Quit();
     }
 
+    // Plays a one shot of the audio clip on the SFX source
+    public void PlayClip(string clipPath, float clipVolume, Boolean randomizePitch)
+    {
+        audioSourceSFX.volume = clipVolume;
+        if (audioSourceSFX == null)
+        {
+            Debug.LogWarning("No AudioSource found");
+            return;
+        }
+        AudioClip clip = Resources.Load<AudioClip>(clipPath);
+        if (randomizePitch)
+        {
+            audioSourceSFX.pitch = UnityEngine.Random.Range(0.6f, 1.0f);
+        }
+        else
+        {
+            audioSourceSFX.pitch = 1.0f;
+        }
+        if (clip != null)
+        {
+            audioSourceSFX.PlayOneShot(clip);
+        }
+        else
+        {
+            Debug.LogWarning("Couldn't load SFX audio clip!");
+        }
+        
+    }
+
+    public void ResetPins()
+    {
+
+        PlayerPinMovement [] pins = FindObjectsOfType<PlayerPinMovement>();
+        foreach (PlayerPinMovement pin in pins)
+        {
+            pin.ResetPlayer();
+        }
+    }
+
+    public void SaveLastLevel(string levelName)
+    {
+        PlayerPrefs.SetString("LastLevel", levelName);
+        PlayerPrefs.Save();
+        Debug.Log("Saved at: " + levelName);
+    }
 }

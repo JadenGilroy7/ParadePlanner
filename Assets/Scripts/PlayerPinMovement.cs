@@ -7,10 +7,9 @@ public class PlayerPinMovement : MonoBehaviour
 {
     private Vector3 placeStart;
     public LayerMask collisionLayers;
-    public AudioSource audioSourceMusic;
-    public AudioSource audioSourceVictory;
     private Rigidbody body;
     private PuzzleController puzzleController;
+    [HideInInspector] public bool placed = false;
 
     void Start()
     {
@@ -28,16 +27,20 @@ public class PlayerPinMovement : MonoBehaviour
     {
         if (transform.position != placeStart)
         {
-            Debug.Log("Victory!");
-            audioSourceMusic.Stop();
-            audioSourceVictory.Play();
-            
+            //Debug.Log("Victory!");
+            //audioSourceMusic.Stop();
+            //audioSourceVictory.Play();
+
             if (puzzleController == null)
             {
                 Debug.LogError("PuzzleController NOT found in the scene!");
             }
-            puzzleController.LevelClear();
-            body.velocity = new Vector3(0f, 0f, 0f);
+            else 
+            { 
+                puzzleController.LevelClear();
+                body.velocity = new Vector3(0f, 0f, 0f);
+                placed = true;
+            }
         }
     }
 
@@ -56,5 +59,6 @@ public class PlayerPinMovement : MonoBehaviour
     {
         body.position = placeStart;
         body.velocity = new Vector3(0f,0f,0f);
+        placed = false;
     }
 }
