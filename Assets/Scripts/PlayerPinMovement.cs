@@ -20,26 +20,44 @@ public class PlayerPinMovement : MonoBehaviour
 
     void Update()
     {
-
+        if (!placed)
+        {
+            if (puzzleController.selectedObject != gameObject)
+            {
+                body.position = placeStart;
+                body.velocity = new Vector3(0f, 0f, 0f);
+            }
+        }
     }
 
     void OnTriggerEnter(Collider other)
     {
-        if (transform.position != placeStart)
-        {
-            //Debug.Log("Victory!");
-            //audioSourceMusic.Stop();
-            //audioSourceVictory.Play();
+        GameObject triggerObject = other.gameObject;
+        float objectX = triggerObject.transform.position.x;
+        float objectY = triggerObject.transform.position.y;
+        float objectZ = triggerObject.transform.position.z;
+        string triggerObjectName = triggerObject.name;
 
-            if (puzzleController == null)
+        if (triggerObjectName == "End" || triggerObjectName == "End (1)" || triggerObjectName == "End (2)" || triggerObjectName == "End (3)")
+        {
+            if (transform.position != placeStart)
             {
-                Debug.LogError("PuzzleController NOT found in the scene!");
-            }
-            else 
-            { 
-                puzzleController.LevelClear();
-                body.velocity = new Vector3(0f, 0f, 0f);
-                placed = true;
+                //Debug.Log("Victory!");
+                //audioSourceMusic.Stop();
+                //audioSourceVictory.Play();
+
+                if (puzzleController == null)
+                {
+                    Debug.LogError("PuzzleController NOT found in the scene!");
+                }
+                else
+                {
+                    body.transform.position = new Vector3(objectX, body.transform.position.y, objectZ);
+                    body.velocity = new Vector3(0f, 0f, 0f);
+                    placed = true;
+                    puzzleController.LevelClear();
+                    puzzleController.UnselectObject();
+                }
             }
         }
     }

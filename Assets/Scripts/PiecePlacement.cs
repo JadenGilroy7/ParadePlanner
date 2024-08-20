@@ -26,6 +26,7 @@ public class PiecePlacement : MonoBehaviour
         }
         placeStart = gameObject.transform.position;
         placeRecent = placeStart;
+        rotationRecent = gameObject.transform.rotation;
     }
 
     void Update()

@@ -1,6 +1,6 @@
 using System;
 using TMPro;
-using UnityEditor.Experimental.GraphView;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -155,7 +155,7 @@ public class PuzzleController : MonoBehaviour
 
                 if (selectedObject.GetComponent<PiecePlacement>() != null)
                 {
-
+                    ResetPins();
                 }
 
                 // Calculate offset to keep relative positions
@@ -166,14 +166,23 @@ public class PuzzleController : MonoBehaviour
             {
                 if (unplacedPieces <= 0)
                 {
+
                     Transform hitTransform = hit.collider.transform;
                     selectedObject = hitTransform.gameObject;
-                    playerControlled = true;
-                    // Calculate offset to keep relative positions
-                    Vector3 cursorWorldPos = GetCursorWorldPosition();
 
-                    PlayClip("Audio/Audio_PinPull", 1.0f, false);
-                    Debug.Log("Player Selected");
+                    if (!selectedObject.GetComponent<PlayerPinMovement>().placed){
+                        playerControlled = true;
+                        // Calculate offset to keep relative positions
+                        Vector3 cursorWorldPos = GetCursorWorldPosition();
+
+                        PlayClip("Audio/Audio_PinPull", 1.0f, false);
+                        Debug.Log("Player Selected");
+                    }
+                    else
+                    {
+                        Debug.Log("Pin already placed!");
+                        selectedObject = null;
+                    }
                 }
                 else
                 {
@@ -186,36 +195,7 @@ public class PuzzleController : MonoBehaviour
         {
             if (selectedObject != null && !levelCleared)
             {
-                if (playerControlled)
-                {
-                    PlayerPinMovement playerMovement = selectedObject.GetComponent<PlayerPinMovement>();
-                    if (playerMovement != null)
-                    {
-                        if (!playerMovement.placed)
-                        {
-                            playerMovement.ResetPlayer();
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogWarning("Selected object does not have a playerPinMovement component");
-                    }
-                    selectedObject = null;
-                    playerControlled = false;
-                }
-                else
-                {
-                    PiecePlacement piecePlacement = selectedObject.GetComponent<PiecePlacement>();
-                    if (piecePlacement != null)
-                    {
-                        piecePlacement.TryPlacePiece();
-                    }
-                    else
-                    {
-                        Debug.LogWarning("Selected object does not have a PiecePlacement component");
-                    }
-                    selectedObject = null;
-                }
+                UnselectObject();
             }
             else
             {
@@ -330,6 +310,7 @@ public class PuzzleController : MonoBehaviour
             }
             levelCleared = false;
 
+            ResetPins();
             // Count all pieces with PiecePlacement component
             unplacedPieces = FindObjectsOfType<PiecePlacement>().Length;
             totalPieces = unplacedPieces;
@@ -343,6 +324,9 @@ public class PuzzleController : MonoBehaviour
             if (nextSceneName != "null"){
                 if(nextSceneName == "SceneLevel2-1"){
                     MusicManager.Instance.ChangeClip(1);
+                }
+                else if(nextSceneName == "SceneLevel3-1"){
+                    MusicManager.Instance.ChangeClip(2);
                 }
                 SceneManager.LoadScene(nextSceneName);
             }
@@ -390,6 +374,7 @@ public class PuzzleController : MonoBehaviour
         placedPins += 1;
         if (placedPins >= pinQuota)
         {
+            Debug.Log("Level Cleared!");
             levelCleared = true;
             TextWarningStart("Level Cleared!");
             if (buttonReset != null)
@@ -450,12 +435,13 @@ public class PuzzleController : MonoBehaviour
 
     public void ResetPins()
     {
-
+        placedPins = 0;
         PlayerPinMovement [] pins = FindObjectsOfType<PlayerPinMovement>();
         foreach (PlayerPinMovement pin in pins)
         {
             pin.ResetPlayer();
         }
+        Debug.Log("Reset Player Pins");
     }
 
     public void SaveLastLevel(string levelName)
@@ -463,5 +449,39 @@ public class PuzzleController : MonoBehaviour
         PlayerPrefs.SetString("LastLevel", levelName);
         PlayerPrefs.Save();
         Debug.Log("Saved at: " + levelName);
+    }
+
+    public void UnselectObject()
+    {
+        if (playerControlled)
+        {
+            PlayerPinMovement playerMovement = selectedObject.GetComponent<PlayerPinMovement>();
+            if (playerMovement != null)
+            {
+                if (!playerMovement.placed)
+                {
+                    playerMovement.ResetPlayer();
+                }
+            }
+            else
+            {
+                Debug.LogWarning("Selected object does not have a playerPinMovement component");
+            }
+            selectedObject = null;
+            playerControlled = false;
+        }
+        else
+        {
+            PiecePlacement piecePlacement = selectedObject.GetComponent<PiecePlacement>();
+            if (piecePlacement != null)
+            {
+                piecePlacement.TryPlacePiece();
+            }
+            else
+            {
+                Debug.LogWarning("Selected object does not have a PiecePlacement component");
+            }
+            selectedObject = null;
+        }
     }
 }

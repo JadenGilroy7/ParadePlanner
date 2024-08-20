@@ -33,6 +33,7 @@ public class MainMenuScript : MonoBehaviour
 
     public void LoadLastLevel()
     {
+        string loadedLevel = PlayerPrefs.GetString("LastLevel", "DefaultLevelName"); // "DefaultLevelName" is the fallback if no data is found
         if (loadedLevel != "DefaultLevelName")
         {
             if (loadedLevel == "SceneLevel2-1" || loadedLevel == "SceneLevel2-2" || loadedLevel == "SceneLevel2-3" || loadedLevel == "SceneLevel2-4" 
@@ -47,6 +48,7 @@ public class MainMenuScript : MonoBehaviour
             {
                 MusicManager.Instance.ChangeClip(2);
             }
+            Debug.Log("Loading Level: " + loadedLevel);
             SceneManager.LoadScene(loadedLevel);
         }
         else
